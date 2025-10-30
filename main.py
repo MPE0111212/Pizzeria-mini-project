@@ -1,7 +1,9 @@
+from random import randint
 from datetime import date
 from PIL import Image
 import numpy
 import qrcode
+import openpyxl
 
 LOCAL_IP = "192.168.0.0"  # Обязательно поменять на ip компьютера, чтобы работал qr код
 port = "8000"
@@ -15,6 +17,8 @@ ingredients = {"Колбаса": 50, "Грибы": 60, "Огурцы": 40, "Ке
 info = []
 purchases = {}
 custom_pizzas_amt = 0
+order_number = ['A', 'B', 'C', 'D', 'E', 'F', 'G'][randint(0, 6)] + str(randint(1, 99))
+total_cost = 0
 
 
 def show_menu():
@@ -109,6 +113,7 @@ def custom_pizza():
 
 
 def qr_code(d, client, summary):
+    global order_number
     html_filename = "qr.html"
     qr_url = f"http://{LOCAL_IP}:{port}/{html_filename}"
     qr = qrcode.QRCode(
@@ -150,6 +155,7 @@ def qr_code(d, client, summary):
         <pre>
     	             Оплата	
         </pre>
+        <p>Номер заказа: {order_number}</p>
         <p>Клиент: {client}</p>
         <p>Сумма (Руб): {summary}</p>
         <p>{'-' * 40}</p>
@@ -171,7 +177,7 @@ def qr_code(d, client, summary):
 
 
 def show_purchases(receipt=False):
-    global purchases
+    global purchases, order_number
     if not receipt:
         #  Вывод в виде предпросмотра заказа
         print(f"\nВаш заказ:\n{'-' * 30}")
@@ -190,7 +196,7 @@ def show_purchases(receipt=False):
         for i in list(purchases.values()):
             summary += i[0]
         print(f"\n\n\n{' ' * 12}ПИЦЦЕРИЯ\n{d}\n"
-              f"{' ' * 13}Оплата\nКлиент: {client}\nСумма (Руб): {float(summary)}\n"
+              f"{' ' * 13}Оплата\nНомер заказа: {order_number}\nКлиент: {client}\nСумма (Руб): {float(summary)}\n"
               f"{'-' * 40}\n{' ' * 10}Товарный чек")
         for k, v in purchases.items():
             print(f"{v[1]} {k}: {float(v[0])}")
@@ -225,7 +231,7 @@ def add_purchase(item):
 
 
 def pay():
-    global purchases
+    global purchases, total_cost
     show_purchases(receipt=True)
     total_cost = 0
     for i in list(purchases.values()):
@@ -268,5 +274,17 @@ while True:
         custom_pizza()
     elif action == '0':
         if pay():
+            #  Сохранение в Excel
+            try:
+                wb = openpyxl.load_workbook('orders.xlsx')
+                ws = wb['Sheet1']
+            except:
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = 'Sheet1'
+            data = [f"{date.today().day}.{date.today().month}.{date.today().year % 100}", order_number,
+                    f"{info[1]} {info[0]} {info[2]}", total_cost, *purchases]
+            ws.append(data)
+            wb.save('orders.xlsx')
             print(f"\nСпасибо за покупку, {info[0]}!")
             break
