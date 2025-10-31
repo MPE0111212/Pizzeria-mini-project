@@ -20,6 +20,7 @@ purchases = {}
 custom_pizzas_amt = 0
 order_number = ['A', 'B', 'C', 'D', 'E', 'F', 'G'][randint(0, 6)] + str(randint(1, 99))
 total_cost = 0
+purchases_list = ""
 
 
 def draw_pizza_art():
@@ -152,9 +153,9 @@ def custom_pizza():
                 print("Такого ингредиента не существует")
 
 
-def qr_code(d, client, summary):
-    global order_number
-    html_filename = "qr.html"
+def qr_code(d, client):
+    global order_number, total_cost
+    html_filename = f"qr{order_number}.html"
     qr_url = f"http://{LOCAL_IP}:{port}/{html_filename}"
     qr = qrcode.QRCode(
         version=1,
@@ -166,7 +167,7 @@ def qr_code(d, client, summary):
     qr.make(fit=True)
 
     img = qr.make_image(fill_color="black", back_color="white")
-    qr_filename = "qrcode.png"
+    qr_filename = f"qrcode{order_number}.png"
     img.save(qr_filename)
     qr_character_list = numpy.array(Image.open(qr_filename)).tolist()
     qr_character_image = ""
@@ -184,29 +185,31 @@ def qr_code(d, client, summary):
     	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </style>
         <head>
+        <meta charset="utf-8">
         <title>PIZZERIA CASH RECEIPT</title>
         </head>
         <body>
 
         <pre>
-    	        PIZZERIA
+    	        Пиццерия
         </pre>
         <p>{d}</p>
         <pre>
-    	         Payment	
+    	         Оплата	
         </pre>
-        <p>Order number: {order_number}</p>
-        <p>Client: {client}</p>
-        <p>Total (Rub): {summary}</p>
+        <p>Номер заказа: {order_number}</p>
+        <p>Клиент: {client}</p>
+        <p>Сумма (Руб): {total_cost}</p>
         <p>{'-' * 40}</p>
         <pre>
-              Cash receipt
+              Товарный чек
         </pre>
-        <p>INFO ON WEBSITE: pizzeria.fake.ru</p>
+        <p>{purchases_list}</p>
+        <p>ИНФОРМАЦИЯ НА САЙТЕ: pizzeria.fake.ru</p>
         <p>----------------------------------------</p>
-        <p>TOTAL PAYABLE.....................{summary}</p>
+        <p>ИТОГ К ОПЛАТЕ.....................{total_cost}</p>
         <p>----------------------------------------</p>
-        <h1>TOTAL = {summary}</h1>
+        <h1>ИТОГ = {total_cost}</h1>
         <img src="{qr_filename}" alt="QR-CODE" width="200" height="200">
         </body>
         </html>
@@ -216,35 +219,37 @@ def qr_code(d, client, summary):
     return qr_character_image
 
 
-def show_purchases(receipt=False):
-    global purchases, order_number
-    if not receipt:
-        #  Вывод в виде предпросмотра заказа
-        print(f"\nВаш заказ:\n{'-' * 30}")
+def update_purchases_data(input_func):
+    def output_func():
+        global purchases_list, total_cost
+        total_cost = 0
+        purchases_list = ""
         for k, v in purchases.items():
-            print(f"{v[1]} {k}: {v[0]}")
-        summary = 0
-        for i in list(purchases.values()):
-            summary += i[0]
-        print(f"ИТОГО: {summary} РУБЛЕЙ\n{'-' * 30}")
-        input("\nВведите что-либо, чтобы продолжить\n")
-    else:
-        #  Вывод в виде чека
-        summary = 0
-        d = f"{date.today().day}.{date.today().month}.{date.today().year % 100}"
-        client = f"{info[0]} {info[1]} {info[2]}"
-        for i in list(purchases.values()):
-            summary += i[0]
-        print(f"\n\n\n{' ' * 12}ПИЦЦЕРИЯ\n{d}\n"
-              f"{' ' * 13}Оплата\nНомер заказа: {order_number}\nКлиент: {client}\nСумма (Руб): {float(summary)}\n"
-              f"{'-' * 40}\n{' ' * 10}Товарный чек")
-        for k, v in purchases.items():
-            print(f"{v[1]} {k}: {float(v[0])}")
-        print(
-            f"ИНФОРМАЦИЯ НА САЙТЕ: pizzeria.fake.ru\n{'-' * 40}\nИТОГ К ОПЛАТЕ{'.' * 21}{float(summary)}\n{'-' * 40}\n"
-            f"И Т О Г = {float(summary)}")
-        print(qr_code(d, client, summary))
-        input("\nВведите что-либо, чтобы продолжить\n")
+            purchases_list += f"{v[1]} {k}: {float(v[0])}\n"
+            total_cost += v[0]
+        input_func()
+
+    return output_func
+
+
+@update_purchases_data
+def order_preview():
+    print(f"\nВаш заказ:\n{'-' * 30}\n{purchases_list}")
+    print(f"ИТОГО: {total_cost} РУБЛЕЙ\n{'-' * 30}")
+    input("\nВведите что-либо, чтобы продолжить\n")
+
+
+@update_purchases_data
+def receipt():
+    d = f"{date.today().day}.{date.today().month}.{date.today().year % 100}"
+    client = f"{info[0]} {info[1]} {info[2]}"
+    print(f"\n\n\n{' ' * 12}ПИЦЦЕРИЯ\n{d}\n"
+          f"{' ' * 13}Оплата\nНомер заказа: {order_number}\nКлиент: {client}\nСумма (Руб): {float(total_cost)}\n"
+          f"{'-' * 40}\n{' ' * 10}Товарный чек\n{purchases_list}")
+    print(
+        f"ИНФОРМАЦИЯ НА САЙТЕ: pizzeria.fake.ru\n{'-' * 40}\nИТОГ К ОПЛАТЕ{'.' * 21}{float(total_cost)}\n{'-' * 40}\n"
+        f"И Т О Г = {float(total_cost)}")
+    print(qr_code(d, client))
 
 
 def add_purchase(item):
@@ -255,7 +260,13 @@ def add_purchase(item):
         print(f"{item} был добавлен в заказ\n")
         return
     except:
-        pass
+        try:
+            purchases[item][0] += spec_menu[item]
+            purchases[item][1] += 1
+            print(f"{item} был добавлен в заказ\n")
+            return
+        except:
+            pass
     try:
         purchases[item] = [menu[item], 1]
         print(f"{item} был добавлен в заказ\n")
@@ -272,10 +283,7 @@ def add_purchase(item):
 
 def pay():
     global purchases, total_cost
-    show_purchases(receipt=True)
-    total_cost = 0
-    for i in list(purchases.values()):
-        total_cost += i[0]
+    receipt()
     payment_type = input(
         "Введите 'н' для оплаты наличными, 'к' для оплаты картой, или любой другой символ для отмены: ")
     if payment_type == 'н':
@@ -307,7 +315,7 @@ while True:
         "\nВведите 1, чтобы посмотреть ваш заказ, 2, чтобы добавить предмет в заказ, "
         "3, чтобы добавить кастомную пиццу в заказ, 0, чтобы оплатить заказ: ")
     if action == '1':
-        show_purchases()
+        order_preview()
     elif action == '2':
         add_purchase(input("\nВведите, какой предмет из меню вы хотите добавить в заказ: "))
     elif action == '3':
