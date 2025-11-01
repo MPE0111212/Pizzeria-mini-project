@@ -5,6 +5,7 @@ from PIL import Image
 import numpy
 import qrcode
 import openpyxl
+import pandas
 
 LOCAL_IP = "192.168.0.0"  # Обязательно поменять на ip компьютера, чтобы работал qr код
 port = "8000"
@@ -21,58 +22,43 @@ custom_pizzas_amt = 0
 order_number = ['A', 'B', 'C', 'D', 'E', 'F', 'G'][randint(0, 6)] + str(randint(1, 99))
 total_cost = 0
 purchases_list = ""
+is_admin = False
+admin_panel_password = "admin"
 
 
-def draw_pizza_art():
-    drawing = """⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⠀⠘⠃⢀⣴⠞⠛⠛⢛⠛⠳⠶⣦⣤⣀⡀⠀⠀⠓⠀⠀⢀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⣠⠖⢋⡝⣿⠀⠀⢀⡞⢡⢂⢊⠔⡀⠐⠠⠀⡀⠀⠈⡙⠳⠶⣤⣀⡀⠀⠀⠀⢠⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡀⠈⠀⣼⢧⣶⣚⣹⠇⠀⡄⢸⡇⣇⣆⣎⣬⣴⣥⣮⣁⣒⠠⢄⡀⠀⠀⠀⢉⡛⠶⣤⣄⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣈⡁⠀⠀⣿⣿⣱⠴⠋⠀⠀⠀⢸⠿⠻⢿⡯⢭⣭⣍⣉⣙⡛⠻⠶⣬⣁⡀⢀⡒⠬⣑⠢⣉⠛⢶⣄⡀⠀⠀⠄⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢺⣭⣭⣹⣳⡀⣿⠉⠀⠀⠘⠃⠀⢠⡿⠈⠁⠈⠻⢦⣀⣀⠪⠭⠙⠻⢶⣤⣉⠛⠶⣬⣑⠦⢙⠢⢙⠢⠈⠛⢶⣄⠀⠀⠀⡄⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢠⡀⠀⠙⠿⠿⠛⠳⣿⡄⠠⣶⠄⠀⠀⣾⠁⣀⣤⠄⠀⣀⣀⣉⠉⠙⠓⠆⠀⢹⠉⡛⠶⣤⣉⠻⢦⣙⠢⣅⠀⠀⠀⠈⡻⢦⣀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣀⣀⡀⠀⠀⠀⠠⠀⠀⠀⠸⠇⠀⠀⠀⠀⢸⠇⣸⠛⢀⣤⠟⣻⣿⢘⡻⢧⡄⠀⠃⢸⠀⢃⠀⠀⠻⢧⣄⡛⢧⣄⠣⠀⢀⡠⠘⢄⠻⣧⡀⠀⠀⠀⠀
-⠀⠀⠀⠀⢹⣯⣍⡛⠳⢦⡀⠀⠀⣀⠀⠀⠤⠀⠀⣠⡟⠀⡉⢠⡟⣁⠳⣛⣋⣼⡽⢂⠻⡄⠀⠸⣆⠀⠀⠂⠈⠒⠉⡻⣦⣍⠻⣮⡣⣙⠎⠂⠁⠈⠻⢦⡀⠀⠀
-⠀⠀⠰⠆⠈⢻⣭⡟⡾⣦⣙⣦⠀⠀⣰⡄⠀⠀⣼⠋⡀⢋⠀⢸⣸⡇⠂⣹⣭⠟⠰⠿⠇⡇⠀⠀⠙⠳⠶⠄⠂⠰⠄⠀⢸⡏⠳⣌⠻⣦⡀⠌⢠⡐⡌⢎⣻⣦⠀
-⠀⣤⣄⣀⠀⠀⠉⠛⠿⠷⠞⠻⡇⠀⢈⠀⠀⣸⠃⠴⢀⢠⠀⠘⣧⣉⣏⠥⣹⢸⣷⢀⡼⠁⠀⢈⣤⠶⠶⠶⢦⣄⠁⠀⢸⡇⠂⠈⠳⣌⠻⣦⡱⣙⣾⡿⠻⣻⡇
-⠀⣿⣧⡍⣳⡄⠈⠁⠀⠴⠄⠀⢠⡄⠀⠀⣰⡏⠐⣁⣤⣤⡄⠰⢄⠙⠿⠿⡥⠶⠖⠋⠔⠀⣴⠏⢰⡶⣦⣴⢦⠈⢳⡄⠘⣇⠁⡀⠠⡈⠳⣌⡻⣿⢻⢀⣧⣿⠃
-⠀⠹⣿⣻⣿⠇⣀⣤⣤⣄⣀⠀⠀⠀⠀⢀⡟⢀⡞⠉⠠⢀⣠⡤⢤⠤⣤⡀⠀⢀⡀⣤⠀⢸⡇⣿⣷⠉⣡⡉⢹⣿⡇⢷⠀⠘⢦⣅⠐⠬⠁⣹⠟⢻⣾⠿⠋⠁⠀
-⠤⠀⠈⠉⢹⣾⣧⢶⣴⣾⡿⠀⠤⠀⢀⡾⡁⢸⡀⠈⣴⠿⡵⠃⠘⠛⣎⣻⣀⠈⠁⠀⡀⠸⣇⢩⡕⣶⢈⣐⢶⣾⢀⡟⠀⠀⠀⣉⣛⣠⣾⣯⠾⠋⠁⠀⠀⠀⣀
-⠀⢀⣄⠀⠙⠁⠛⠿⠛⠋⠀⠀⠀⠀⣼⢃⠃⠀⠁⣸⣯⠓⡀⠿⣠⣞⠯⡉⣩⠻⣆⠀⢿⡀⠙⢧⣙⠁⢯⡿⢈⣥⠟⠀⡠⢂⡾⢋⣩⠾⠋⠁⠀⠀⠀⠘⠁⠀⠀
-⢠⡟⢹⣦⡀⠀⠶⠀⢀⡀⠈⠁⠀⣸⠏⠀⠀⠀⡀⠸⣏⢶⠇⣼⢡⣻⡞⣧⠛⣠⣹⠀⠀⠛⠶⣤⡌⠉⠛⢉⠉⠔⣀⣤⡶⣿⡷⠟⠁⠠⠀⠀⣀⣤⣴⢶⣿⡿⠀
-⢾⣄⠙⠾⠻⣄⠀⠀⠈⠀⠀⠀⢠⣏⣴⠖⠋⢉⢁⠀⠈⠙⠛⢿⠃⣰⠿⢏⡔⣢⡏⠀⣈⠀⠀⠠⠀⡄⡐⢡⡶⠞⣋⣴⠞⠉⠀⠀⠀⠀⢀⡾⠋⠀⣠⡾⣿⠃⠀
-⠸⣿⣎⢆⢤⠙⢶⡀⠘⠁⠀⢀⣾⠋⠄⢀⣁⣀⣀⡀⠂⠀⠇⠘⠻⢤⣶⡿⠞⠋⢀⠀⢹⠄⠈⠡⠄⢐⣡⣿⣴⠞⠋⠀⠀⠀⠀⠰⠀⠀⠸⣇⣠⠾⢗⣾⡟⠀⢠
-⠀⠙⠻⠾⠼⠶⠞⠋⠀⠀⣰⠟⡁⣠⠞⠋⣩⣯⢉⣟⠳⣄⠀⠀⣀⣀⡀⠠⠀⢀⣀⣡⠞⢀⡴⠖⢛⣻⠿⠋⠁⠀⠀⣀⣴⣆⡀⠀⠀⠀⠀⠙⠳⠿⠟⠋⠀⠀⠀
-⠰⠂⠀⠀⠀⠀⠠⠄⠀⣰⡇⠄⢰⠿⣿⣻⠌⠛⠋⣴⢶⡽⣇⠈⠉⠍⠙⠳⠂⣀⡥⠤⠴⢟⣡⠶⠛⠁⠀⠀⠀⣴⠟⣩⠤⢬⡛⢷⣄⠈⠃⠀⠀⠀⠀⣀⠀⠐⠂
-⠀⠀⠀⢠⣷⣆⠀⠀⢰⡟⠐⠀⢸⡀⣩⣭⡀⠿⠃⠛⠟⠁⣿⠀⡀⠠⠀⠐⣰⠏⢐⣠⡶⠋⠁⠀⠀⠴⠀⠀⢸⡇⡂⣇⢾⣴⡿⠀⣹⠃⠀⠸⠂⠀⠘⠛⠂⢠⠄
-⠀⠈⠁⠀⠉⢀⠀⢠⡟⡀⢰⠃⠈⢧⡻⠾⢣⣟⡌⢿⠟⣼⠃⢀⡤⢒⣡⣶⣯⡶⠛⠁⠀⡄⠀⢠⣦⠀⠀⠀⠘⢷⡑⢌⣒⢚⠱⢣⡞⠃⠀⠀⠄⠀⢺⠖⠀⠀⠀
-⠀⠀⠀⣀⠀⠀⢀⣾⠀⢃⡸⡄⠀⢈⠙⠦⢬⣭⣥⠴⠚⠁⣐⣡⣴⣿⠿⠋⠁⠀⠀⠀⠀⠀⢼⠄⠁⠀⢀⠀⠀⠀⠛⠓⢶⡶⠚⠋⠀⠀⠀⣠⣴⣲⢦⡀⠀⠀⠀
-⠀⠀⠀⠁⠀⢰⡟⢡⠈⠀⢣⠙⣦⡄⠑⠀⠀⠀⡆⣥⣶⠛⣭⣿⠛⠁⠀⠀⠐⠂⠈⠁⣤⠀⠈⠀⠀⢰⣾⣧⡆⠀⠀⠀⠈⠁⠀⢠⡄⠀⢰⣯⡝⠁⠈⡇⠀⠀⠀
-⠀⠀⠀⠀⢀⡟⢀⠋⠀⢀⠀⠂⠀⠉⠙⠁⣴⠟⠋⣩⡴⠞⠉⠀⠀⠀⠖⠀⠀⣀⡀⠀⠉⠀⠀⢀⡀⠐⢻⠟⠂⠀⠀⠒⠀⠀⠀⠈⠁⠀⣿⣾⡇⡴⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣼⠃⠊⠜⠀⠄⢠⡶⣛⣿⣦⢀⣯⡶⠛⠁⠀⠀⠀⠐⠀⢀⣤⠶⣻⠟⢿⡲⢦⡀⠀⠀⣠⠀⠀⠀⠀⠀⣀⣠⣴⡶⠾⣆⠀⢰⠏⠸⠃⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⢸⡏⡘⢀⠒⠰⢀⡿⢋⣭⠶⣿⢀⡏⠀⠀⠀⠀⠈⠁⠀⣰⠟⠁⣼⠋⠀⠈⢯⡠⠙⣦⠀⠀⢠⣤⡶⣞⣋⣉⣡⣶⡇⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢀⡟⢀⣁⣈⣐⣡⣾⠿⠛⠁⠀⠙⠛⠁⠀⣤⣄⣤⡄⠀⠀⣿⢰⣻⣧⠀⠀⠀⡈⣿⣓⢹⡇⠀⠈⢧⡱⢌⣛⠓⢓⣫⠔⣼⠃⠀⠐⠂⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⣼⡿⢛⣽⠟⠛⠋⠀⠀⠀⠐⠆⠀⠀⠀⠀⣼⡿⣿⡄⠀⠀⠹⣦⣺⣧⡤⣀⣠⣱⣟⣢⡿⠁⠀⢤⠀⠙⠷⠮⠭⠥⠶⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠸⠿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣽⣿⣿⣿⣿⡽⠋⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠰⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"""
-    for i in drawing.split('\n'):
-        for j in i:
-            print(j, end='')
-        print()
-        sleep(0.1)
+#  Декораторы
+def update_purchases_data(input_func):
+    def output_func():
+        global purchases_list, total_cost
+        total_cost = 0
+        purchases_list = ""
+        for k, v in purchases.items():
+            purchases_list += f"{v[1]} {k}: {float(v[0])}\n"
+            total_cost += v[0]
+        input_func()
+
+    return output_func
 
 
-def show_menu():
-    print(f"\n{' ' * 12}МЕНЮ{' ' * 12}")
-    print("-" * 30)
-    for k, v in menu.items():
-        print(f"{k}: стоимость {v}")
-    print("-" * 30)
-    if info[3] >= 18:
-        print("МЕНЮ ДЛЯ ВЗРОСЛЫХ")
-        for k, v in spec_menu.items():
-            print(f"{k}: стоимость - {v} рублей")
-        print("-" * 30)
+#  Регистрация пользователя
+def get_info():
+    global is_admin
+    try:
+        name = input("Введите ваше имя: ").capitalize()
+        surname = input("Введите вашу фамилию: ").capitalize()
+        lastname = input("Введите ваше отчество: ").capitalize()
+        age = int(input("Введите ваш возраст: "))
+        if name == "Admin" and surname == "Admin" and lastname == "Admin":
+            if input("Введите пароль от Admin консоли: "):
+                is_admin = True
+                return [name, surname, lastname, age]
+        if test_info(name=name, surname=surname, lastname=lastname, age=age):
+            print("\nДанные приняты\n")
+            return [name, surname, lastname, age]
+        else:
+            print("\nВведены неверные данные\n")
+    except:
+        print("\nВведены неверные данные\n")
 
 
 def test_info(name, surname, lastname, age):
@@ -99,19 +85,34 @@ def test_info(name, surname, lastname, age):
     return True
 
 
-def get_info():
+#  Ввод информации
+def add_purchase(item):
+    global purchases, menu, spec_menu
     try:
-        name = input("Введите ваше имя: ")
-        surname = input("Введите вашу фамилию: ")
-        lastname = input("Введите ваше отчество: ")
-        age = int(input("Введите ваш возраст: "))
-        if test_info(name=name, surname=surname, lastname=lastname, age=age):
-            print("\nДанные приняты\n")
-            return [name, surname, lastname, age]
-        else:
-            print("\nВведены неверные данные\n")
+        purchases[item][0] += menu[item]
+        purchases[item][1] += 1
+        print(f"{item} был добавлен в заказ\n")
+        return
     except:
-        print("\nВведены неверные данные\n")
+        try:
+            purchases[item][0] += spec_menu[item]
+            purchases[item][1] += 1
+            print(f"{item} был добавлен в заказ\n")
+            return
+        except:
+            pass
+    try:
+        purchases[item] = [menu[item], 1]
+        print(f"{item} был добавлен в заказ\n")
+    except:
+        if info[3] >= 18:
+            try:
+                purchases[item] = [spec_menu[item], 1]
+                print(f"{item} был добавлен в заказ\n")
+            except:
+                print(f"В меню нет предмета {item}\n")
+        else:
+            print(f"В детском меню нет предмета {item}\n")
 
 
 def custom_pizza():
@@ -153,6 +154,101 @@ def custom_pizza():
                 print("Такого ингредиента не существует")
 
 
+def pay():
+    global purchases, total_cost
+    receipt()
+    payment_type = input(
+        "Введите 'н' для оплаты наличными, 'к' для оплаты картой, или любой другой символ для отмены: ")
+    if payment_type == 'н':
+        try:
+            payment = 0
+            while payment < total_cost:
+                payment = int(input("Введите сумму к оплате наличными: "))
+            print(f"Сдача: {payment - total_cost} рублей.\n")
+            return True
+        except:
+            print("\nВведена неверная сумма к оплате наличными\n")
+            return False
+    elif payment_type == 'к':
+        print(f"Сумма оплаты: {total_cost} рублей.\n")
+        return True
+    return False
+
+
+#  Вывод информации
+def show_menu():
+    print(f"\n{' ' * 12}МЕНЮ{' ' * 12}")
+    print("-" * 30)
+    for k, v in menu.items():
+        print(f"{k}: стоимость {v}")
+    print("-" * 30)
+    if info[3] >= 18:
+        print("МЕНЮ ДЛЯ ВЗРОСЛЫХ")
+        for k, v in spec_menu.items():
+            print(f"{k}: стоимость - {v} рублей")
+        print("-" * 30)
+
+
+@update_purchases_data
+def order_preview():
+    print(f"\nВаш заказ:\n{'-' * 30}\n{purchases_list}")
+    print(f"ИТОГО: {total_cost} РУБЛЕЙ\n{'-' * 30}")
+    input("\nВведите что-либо, чтобы продолжить\n")
+
+
+@update_purchases_data
+def receipt():
+    d = f"{date.today().day}.{date.today().month}.{date.today().year % 100}"
+    client = f"{info[0]} {info[1]} {info[2]}"
+    print(f"\n\n\n{' ' * 12}ПИЦЦЕРИЯ\n{d}\n"
+          f"{' ' * 13}Оплата\nНомер заказа: {order_number}\nКлиент: {client}\nСумма (Руб): {float(total_cost)}\n"
+          f"{'-' * 40}\n{' ' * 10}Товарный чек\n{purchases_list}")
+    print(
+        f"ИНФОРМАЦИЯ НА САЙТЕ: pizzeria.fake.ru\n{'-' * 40}\nИТОГ К ОПЛАТЕ{'.' * 21}{float(total_cost)}\n{'-' * 40}\n"
+        f"И Т О Г = {float(total_cost)}")
+    print(qr_code(d, client))
+
+
+def draw_pizza_art():
+    drawing = """⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⠀⠘⠃⢀⣴⠞⠛⠛⢛⠛⠳⠶⣦⣤⣀⡀⠀⠀⠓⠀⠀⢀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⣠⠖⢋⡝⣿⠀⠀⢀⡞⢡⢂⢊⠔⡀⠐⠠⠀⡀⠀⠈⡙⠳⠶⣤⣀⡀⠀⠀⠀⢠⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡀⠈⠀⣼⢧⣶⣚⣹⠇⠀⡄⢸⡇⣇⣆⣎⣬⣴⣥⣮⣁⣒⠠⢄⡀⠀⠀⠀⢉⡛⠶⣤⣄⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣈⡁⠀⠀⣿⣿⣱⠴⠋⠀⠀⠀⢸⠿⠻⢿⡯⢭⣭⣍⣉⣙⡛⠻⠶⣬⣁⡀⢀⡒⠬⣑⠢⣉⠛⢶⣄⡀⠀⠀⠄⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢺⣭⣭⣹⣳⡀⣿⠉⠀⠀⠘⠃⠀⢠⡿⠈⠁⠈⠻⢦⣀⣀⠪⠭⠙⠻⢶⣤⣉⠛⠶⣬⣑⠦⢙⠢⢙⠢⠈⠛⢶⣄⠀⠀⠀⡄⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢠⡀⠀⠙⠿⠿⠛⠳⣿⡄⠠⣶⠄⠀⠀⣾⠁⣀⣤⠄⠀⣀⣀⣉⠉⠙⠓⠆⠀⢹⠉⡛⠶⣤⣉⠻⢦⣙⠢⣅⠀⠀⠀⠈⡻⢦⣀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⣀⣀⡀⠀⠀⠀⠠⠀⠀⠀⠸⠇⠀⠀⠀⠀⢸⠇⣸⠛⢀⣤⠟⣻⣿⢘⡻⢧⡄⠀⠃⢸⠀⢃⠀⠀⠻⢧⣄⡛⢧⣄⠣⠀⢀⡠⠘⢄⠻⣧⡀⠀⠀⠀⠀
+⠀⠀⠀⠀⢹⣯⣍⡛⠳⢦⡀⠀⠀⣀⠀⠀⠤⠀⠀⣠⡟⠀⡉⢠⡟⣁⠳⣛⣋⣼⡽⢂⠻⡄⠀⠸⣆⠀⠀⠂⠈⠒⠉⡻⣦⣍⠻⣮⡣⣙⠎⠂⠁⠈⠻⢦⡀⠀⠀
+⠀⠀⠰⠆⠈⢻⣭⡟⡾⣦⣙⣦⠀⠀⣰⡄⠀⠀⣼⠋⡀⢋⠀⢸⣸⡇⠂⣹⣭⠟⠰⠿⠇⡇⠀⠀⠙⠳⠶⠄⠂⠰⠄⠀⢸⡏⠳⣌⠻⣦⡀⠌⢠⡐⡌⢎⣻⣦⠀
+⠀⣤⣄⣀⠀⠀⠉⠛⠿⠷⠞⠻⡇⠀⢈⠀⠀⣸⠃⠴⢀⢠⠀⠘⣧⣉⣏⠥⣹⢸⣷⢀⡼⠁⠀⢈⣤⠶⠶⠶⢦⣄⠁⠀⢸⡇⠂⠈⠳⣌⠻⣦⡱⣙⣾⡿⠻⣻⡇
+⠀⣿⣧⡍⣳⡄⠈⠁⠀⠴⠄⠀⢠⡄⠀⠀⣰⡏⠐⣁⣤⣤⡄⠰⢄⠙⠿⠿⡥⠶⠖⠋⠔⠀⣴⠏⢰⡶⣦⣴⢦⠈⢳⡄⠘⣇⠁⡀⠠⡈⠳⣌⡻⣿⢻⢀⣧⣿⠃
+⠀⠹⣿⣻⣿⠇⣀⣤⣤⣄⣀⠀⠀⠀⠀⢀⡟⢀⡞⠉⠠⢀⣠⡤⢤⠤⣤⡀⠀⢀⡀⣤⠀⢸⡇⣿⣷⠉⣡⡉⢹⣿⡇⢷⠀⠘⢦⣅⠐⠬⠁⣹⠟⢻⣾⠿⠋⠁⠀
+⠤⠀⠈⠉⢹⣾⣧⢶⣴⣾⡿⠀⠤⠀⢀⡾⡁⢸⡀⠈⣴⠿⡵⠃⠘⠛⣎⣻⣀⠈⠁⠀⡀⠸⣇⢩⡕⣶⢈⣐⢶⣾⢀⡟⠀⠀⠀⣉⣛⣠⣾⣯⠾⠋⠁⠀⠀⠀⣀
+⠀⢀⣄⠀⠙⠁⠛⠿⠛⠋⠀⠀⠀⠀⣼⢃⠃⠀⠁⣸⣯⠓⡀⠿⣠⣞⠯⡉⣩⠻⣆⠀⢿⡀⠙⢧⣙⠁⢯⡿⢈⣥⠟⠀⡠⢂⡾⢋⣩⠾⠋⠁⠀⠀⠀⠘⠁⠀⠀
+⢠⡟⢹⣦⡀⠀⠶⠀⢀⡀⠈⠁⠀⣸⠏⠀⠀⠀⡀⠸⣏⢶⠇⣼⢡⣻⡞⣧⠛⣠⣹⠀⠀⠛⠶⣤⡌⠉⠛⢉⠉⠔⣀⣤⡶⣿⡷⠟⠁⠠⠀⠀⣀⣤⣴⢶⣿⡿⠀
+⢾⣄⠙⠾⠻⣄⠀⠀⠈⠀⠀⠀⢠⣏⣴⠖⠋⢉⢁⠀⠈⠙⠛⢿⠃⣰⠿⢏⡔⣢⡏⠀⣈⠀⠀⠠⠀⡄⡐⢡⡶⠞⣋⣴⠞⠉⠀⠀⠀⠀⢀⡾⠋⠀⣠⡾⣿⠃⠀
+⠸⣿⣎⢆⢤⠙⢶⡀⠘⠁⠀⢀⣾⠋⠄⢀⣁⣀⣀⡀⠂⠀⠇⠘⠻⢤⣶⡿⠞⠋⢀⠀⢹⠄⠈⠡⠄⢐⣡⣿⣴⠞⠋⠀⠀⠀⠀⠰⠀⠀⠸⣇⣠⠾⢗⣾⡟⠀⢠
+⠀⠙⠻⠾⠼⠶⠞⠋⠀⠀⣰⠟⡁⣠⠞⠋⣩⣯⢉⣟⠳⣄⠀⠀⣀⣀⡀⠠⠀⢀⣀⣡⠞⢀⡴⠖⢛⣻⠿⠋⠁⠀⠀⣀⣴⣆⡀⠀⠀⠀⠀⠙⠳⠿⠟⠋⠀⠀⠀
+⠰⠂⠀⠀⠀⠀⠠⠄⠀⣰⡇⠄⢰⠿⣿⣻⠌⠛⠋⣴⢶⡽⣇⠈⠉⠍⠙⠳⠂⣀⡥⠤⠴⢟⣡⠶⠛⠁⠀⠀⠀⣴⠟⣩⠤⢬⡛⢷⣄⠈⠃⠀⠀⠀⠀⣀⠀⠐⠂
+⠀⠀⠀⢠⣷⣆⠀⠀⢰⡟⠐⠀⢸⡀⣩⣭⡀⠿⠃⠛⠟⠁⣿⠀⡀⠠⠀⠐⣰⠏⢐⣠⡶⠋⠁⠀⠀⠴⠀⠀⢸⡇⡂⣇⢾⣴⡿⠀⣹⠃⠀⠸⠂⠀⠘⠛⠂⢠⠄
+⠀⠈⠁⠀⠉⢀⠀⢠⡟⡀⢰⠃⠈⢧⡻⠾⢣⣟⡌⢿⠟⣼⠃⢀⡤⢒⣡⣶⣯⡶⠛⠁⠀⡄⠀⢠⣦⠀⠀⠀⠘⢷⡑⢌⣒⢚⠱⢣⡞⠃⠀⠀⠄⠀⢺⠖⠀⠀⠀
+⠀⠀⠀⣀⠀⠀⢀⣾⠀⢃⡸⡄⠀⢈⠙⠦⢬⣭⣥⠴⠚⠁⣐⣡⣴⣿⠿⠋⠁⠀⠀⠀⠀⠀⢼⠄⠁⠀⢀⠀⠀⠀⠛⠓⢶⡶⠚⠋⠀⠀⠀⣠⣴⣲⢦⡀⠀⠀⠀
+⠀⠀⠀⠁⠀⢰⡟⢡⠈⠀⢣⠙⣦⡄⠑⠀⠀⠀⡆⣥⣶⠛⣭⣿⠛⠁⠀⠀⠐⠂⠈⠁⣤⠀⠈⠀⠀⢰⣾⣧⡆⠀⠀⠀⠈⠁⠀⢠⡄⠀⢰⣯⡝⠁⠈⡇⠀⠀⠀
+⠀⠀⠀⠀⢀⡟⢀⠋⠀⢀⠀⠂⠀⠉⠙⠁⣴⠟⠋⣩⡴⠞⠉⠀⠀⠀⠖⠀⠀⣀⡀⠀⠉⠀⠀⢀⡀⠐⢻⠟⠂⠀⠀⠒⠀⠀⠀⠈⠁⠀⣿⣾⡇⡴⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⣼⠃⠊⠜⠀⠄⢠⡶⣛⣿⣦⢀⣯⡶⠛⠁⠀⠀⠀⠐⠀⢀⣤⠶⣻⠟⢿⡲⢦⡀⠀⠀⣠⠀⠀⠀⠀⠀⣀⣠⣴⡶⠾⣆⠀⢰⠏⠸⠃⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢸⡏⡘⢀⠒⠰⢀⡿⢋⣭⠶⣿⢀⡏⠀⠀⠀⠀⠈⠁⠀⣰⠟⠁⣼⠋⠀⠈⢯⡠⠙⣦⠀⠀⢠⣤⡶⣞⣋⣉⣡⣶⡇⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢀⡟⢀⣁⣈⣐⣡⣾⠿⠛⠁⠀⠙⠛⠁⠀⣤⣄⣤⡄⠀⠀⣿⢰⣻⣧⠀⠀⠀⡈⣿⣓⢹⡇⠀⠈⢧⡱⢌⣛⠓⢓⣫⠔⣼⠃⠀⠐⠂⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⣼⡿⢛⣽⠟⠛⠋⠀⠀⠀⠐⠆⠀⠀⠀⠀⣼⡿⣿⡄⠀⠀⠹⣦⣺⣧⡤⣀⣠⣱⣟⣢⡿⠁⠀⢤⠀⠙⠷⠮⠭⠥⠶⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠸⠿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣽⣿⣿⣿⣿⡽⠋⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠰⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"""
+    for i in drawing.split('\n'):
+        for j in i:
+            print(j, end='')
+        print()
+        sleep(0.1)
+
+
+#  Работа с данными во внешних файлах
 def qr_code(d, client):
     global order_number, total_cost
     html_filename = f"qr{order_number}.html"
@@ -219,124 +315,66 @@ def qr_code(d, client):
     return qr_character_image
 
 
-def update_purchases_data(input_func):
-    def output_func():
-        global purchases_list, total_cost
-        total_cost = 0
-        purchases_list = ""
-        for k, v in purchases.items():
-            purchases_list += f"{v[1]} {k}: {float(v[0])}\n"
-            total_cost += v[0]
-        input_func()
-
-    return output_func
-
-
-@update_purchases_data
-def order_preview():
-    print(f"\nВаш заказ:\n{'-' * 30}\n{purchases_list}")
-    print(f"ИТОГО: {total_cost} РУБЛЕЙ\n{'-' * 30}")
-    input("\nВведите что-либо, чтобы продолжить\n")
-
-
-@update_purchases_data
-def receipt():
-    d = f"{date.today().day}.{date.today().month}.{date.today().year % 100}"
-    client = f"{info[0]} {info[1]} {info[2]}"
-    print(f"\n\n\n{' ' * 12}ПИЦЦЕРИЯ\n{d}\n"
-          f"{' ' * 13}Оплата\nНомер заказа: {order_number}\nКлиент: {client}\nСумма (Руб): {float(total_cost)}\n"
-          f"{'-' * 40}\n{' ' * 10}Товарный чек\n{purchases_list}")
-    print(
-        f"ИНФОРМАЦИЯ НА САЙТЕ: pizzeria.fake.ru\n{'-' * 40}\nИТОГ К ОПЛАТЕ{'.' * 21}{float(total_cost)}\n{'-' * 40}\n"
-        f"И Т О Г = {float(total_cost)}")
-    print(qr_code(d, client))
-
-
-def add_purchase(item):
-    global purchases, menu, spec_menu
+def edit_excel():
     try:
-        purchases[item][0] += menu[item]
-        purchases[item][1] += 1
-        print(f"{item} был добавлен в заказ\n")
-        return
+        wb = openpyxl.load_workbook('orders.xlsx')
+        ws = wb['Sheet1']
     except:
-        try:
-            purchases[item][0] += spec_menu[item]
-            purchases[item][1] += 1
-            print(f"{item} был добавлен в заказ\n")
-            return
-        except:
-            pass
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Sheet1'
+    data = [f"{date.today().day}.{date.today().month}.{date.today().year % 100}", order_number,
+            f"{info[1]} {info[0]} {info[2]}", total_cost, *purchases]
+    ws.append(data)
     try:
-        purchases[item] = [menu[item], 1]
-        print(f"{item} был добавлен в заказ\n")
-    except:
-        if info[3] >= 18:
-            try:
-                purchases[item] = [spec_menu[item], 1]
-                print(f"{item} был добавлен в заказ\n")
-            except:
-                print(f"В меню нет предмета {item}\n")
-        else:
-            print(f"В детском меню нет предмета {item}\n")
+        wb.save('orders.xlsx')
+    except Exception as e:
+        print(f"Таблица Excel 'orders' не была закрыта перед сохранением. Заказ не сохранён в таблицу. ({e})")
 
 
-def pay():
-    global purchases, total_cost
-    receipt()
-    payment_type = input(
-        "Введите 'н' для оплаты наличными, 'к' для оплаты картой, или любой другой символ для отмены: ")
-    if payment_type == 'н':
-        try:
-            payment = 0
-            while payment < total_cost:
-                payment = int(input("Введите сумму к оплате наличными: "))
-            print(f"Сдача: {payment - total_cost} рублей.\n")
-            return True
-        except:
-            print("\nВведена неверная сумма к оплате наличными\n")
-            return False
-    elif payment_type == 'к':
-        print(f"Сумма оплаты: {total_cost} рублей.\n")
-        return True
-    return False
-
-
-#  Основная часть программы
-print(
-    "\n\n\n\n\n\n\n-----------Добро пожаловать в Пиццерию-----------\n"
-    "Пожалуйста, введите ваше имя, фамилию и возраст:\n")
-while not info:
-    info = get_info()
-print(f"\nЗдравстуйте, {info[0]} {info[1]}\n")
-while True:
-    show_menu()
-    action = input(
-        "\nВведите 1, чтобы посмотреть ваш заказ, 2, чтобы добавить предмет в заказ, "
-        "3, чтобы добавить кастомную пиццу в заказ, 0, чтобы оплатить заказ: ")
-    if action == '1':
-        order_preview()
-    elif action == '2':
-        add_purchase(input("\nВведите, какой предмет из меню вы хотите добавить в заказ: "))
-    elif action == '3':
-        custom_pizza()
-    elif action == '0':
-        if pay():
-            #  Сохранение в Excel
-            try:
-                wb = openpyxl.load_workbook('orders.xlsx')
-                ws = wb['Sheet1']
-            except:
-                wb = openpyxl.Workbook()
-                ws = wb.active
-                ws.title = 'Sheet1'
-            data = [f"{date.today().day}.{date.today().month}.{date.today().year % 100}", order_number,
-                    f"{info[1]} {info[0]} {info[2]}", total_cost, *purchases]
-            ws.append(data)
-            try:
-                wb.save('orders.xlsx')
-            except Exception as e:
-                print(f"Таблица Excel 'orders' не была закрыта перед сохранением. Заказ не сохранён в таблицу. ({e})")
-            print(f"\nСпасибо за покупку, {info[0]}!")
-            draw_pizza_art()
+#  Режим администратора
+def admin_main():
+    while True:
+        action = input("Введите 1, чтобы вывести таблицу orders, 0, чтобы закончить работу: ")
+        if action == '0':
             break
+        elif action == '1':
+            print_orders()
+
+
+def print_orders():
+    print('\n' + pandas.read_excel(io='orders.xlsx', engine='openpyxl'))
+
+
+#  Основная функция
+def main():
+    global info
+    print(
+        "\n\n\n\n\n\n\n-----------Добро пожаловать в Пиццерию-----------\n"
+        "Пожалуйста, введите ваше имя, фамилию и возраст:\n")
+    while not info:
+        info = get_info()
+    if is_admin:
+        admin_main()
+        return
+    print(f"\nЗдравстуйте, {info[0]} {info[1]}\n")
+    while True:
+        show_menu()
+        action = input(
+            "\nВведите 1, чтобы посмотреть ваш заказ, 2, чтобы добавить предмет в заказ, "
+            "3, чтобы добавить кастомную пиццу в заказ, 0, чтобы оплатить заказ: ")
+        if action == '1':
+            order_preview()
+        elif action == '2':
+            add_purchase(input("\nВведите, какой предмет из меню вы хотите добавить в заказ: "))
+        elif action == '3':
+            custom_pizza()
+        elif action == '0':
+            if pay():
+                edit_excel()
+                print(f"\nСпасибо за покупку, {info[0]}!")
+                draw_pizza_art()
+                break
+
+
+main()
