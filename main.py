@@ -344,7 +344,7 @@ def admin_main():
 
 def print_orders():
     try:
-        print('\n' + pandas.read_excel(io='orders.xlsx', engine='openpyxl'))
+        print(pandas.read_excel(io='orders.xlsx', engine='openpyxl'))
     except:
         print("\nТаблицы orders не существует")
 
