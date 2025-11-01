@@ -343,14 +343,17 @@ def admin_main():
 
 
 def print_orders():
-    print('\n' + pandas.read_excel(io='orders.xlsx', engine='openpyxl'))
+    try:
+        print('\n' + pandas.read_excel(io='orders.xlsx', engine='openpyxl'))
+    except:
+        print("\nТаблицы orders не существует")
 
 
 #  Основная функция
 def main():
     global info
     print(
-        "\n\n\n\n\n\n\n-----------Добро пожаловать в Пиццерию-----------\n"
+        "\n\n\n-----------Добро пожаловать в Пиццерию-----------\n"
         "Пожалуйста, введите ваше имя, фамилию и возраст:\n")
     while not info:
         info = get_info()
