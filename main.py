@@ -6,6 +6,7 @@ import numpy
 import qrcode
 import openpyxl
 import pandas
+import re
 
 LOCAL_IP = "192.168.0.0"  # Обязательно поменять на ip компьютера, чтобы работал qr код
 port = "8000"
@@ -19,7 +20,7 @@ ingredients = {"Колбаса": 50, "Грибы": 60, "Огурцы": 40, "Ке
 info = []
 purchases = {}
 custom_pizzas_amt = 0
-order_number = ['A', 'B', 'C', 'D', 'E', 'F', 'G'][randint(0, 6)] + str(randint(1, 99))
+order_number = 'A1'
 total_cost = 0
 purchases_list = ""
 is_admin = False
@@ -48,40 +49,46 @@ def get_info():
         surname = input("Введите вашу фамилию: ").capitalize()
         lastname = input("Введите ваше отчество: ").capitalize()
         age = int(input("Введите ваш возраст: "))
+        phone_number = input("Введите ваш телефонный номер (в формате x-xxx-xxx-xx-xx, где x - любая цифра): ")
+        email = input("Введите адрес вашей электронной почты: ")
         if name == "Admin" and surname == "Admin" and lastname == "Admin":
             if input("Введите пароль от Admin консоли: "):
                 is_admin = True
                 return [name, surname, lastname, age]
-        if test_info(name=name, surname=surname, lastname=lastname, age=age):
+        if test_info(name=name, surname=surname, lastname=lastname, age=age, phone_number=phone_number, email=email):
             print("\nДанные приняты\n")
-            return [name, surname, lastname, age]
+            return [name, surname, lastname, age, phone_number, email]
         else:
             print("\nВведены неверные данные\n")
-    except:
-        print("\nВведены неверные данные\n")
+    except Exception as e:
+        print(f"\nВведены неверные данные {e}\n")
 
 
-def test_info(name, surname, lastname, age):
-    correct_name = True
-    for i in range(1, len(name)):
-        if not name[i].islower():
-            correct_name = False
-            break
-    correct_name = correct_name and name[0].isupper()
-    correct_surname = True
-    for i in range(1, len(surname)):
-        if not surname[i].islower():
-            correct_surname = False
-            break
-    correct_surname = correct_surname and surname[0].isupper()
-    correct_lastname = True
-    for i in range(1, len(lastname)):
-        if not lastname[i].islower():
-            correct_lastname = False
-            break
-    correct_lastname = correct_lastname and lastname[0].isupper()
-    if age > 140 or age < 1 or not correct_name or not correct_surname or not correct_lastname:
+def test_info(name, surname, lastname, age, phone_number, email):
+    if (not re.fullmatch(r'\w+', name) or not re.fullmatch(r'\w+', surname) or not re.fullmatch(r'\w+', lastname)
+            or not re.fullmatch(r'(?:\+7|8)(?:-\d{2,3}){4}', phone_number)
+            or not re.fullmatch(r'\w+@[a-z.]+', email)):
         return False
+    try:
+        wb = openpyxl.load_workbook('accounts.xlsx')
+        ws = wb.active
+        account_info = find_info(email, ws=ws)
+        if account_info:
+            print("Эта электронная почта уже занята")
+            return False
+    except:
+        pass
+    if name != name.capitalize():
+        name = name.capitalize()
+    if surname != surname.capitalize():
+        surname = surname.capitalize()
+    if lastname != lastname.capitalize():
+        lastname = lastname.capitalize()
+    try:
+        if not 0 < int(age) < 140:
+            age = 1
+    except:
+        age = 1
     return True
 
 
@@ -135,7 +142,8 @@ def custom_pizza():
                 print(f" - {i} ({ingredients[i]} рублей)")
             print(f"ИТОГО: {cost} РУБЛЕЙ\n{'-' * 30}")
             action = input(
-                "Введите 1, чтобы подтвердить, 0, чтобы удалить пиццу, или любой другой символ, чтобы продолжить добавление ингредиентов: ")
+                "Введите 1, чтобы подтвердить, 0, чтобы удалить пиццу, или любой другой символ, чтобы продолжить "
+                "добавление ингредиентов: ")
             if action == '1':
                 print("Кастомная пицца была добавлена в заказ")
                 purchases[f"Кастомная пицца {custom_pizzas_amt}"] = [cost, 1]
@@ -315,7 +323,7 @@ def qr_code(d, client):
     return qr_character_image
 
 
-def edit_excel():
+def edit_orders_excel():
     try:
         wb = openpyxl.load_workbook('orders.xlsx')
         ws = wb['Sheet1']
@@ -330,6 +338,39 @@ def edit_excel():
         wb.save('orders.xlsx')
     except Exception as e:
         print(f"Таблица Excel 'orders' не была закрыта перед сохранением. Заказ не сохранён в таблицу. ({e})")
+
+
+def find_info(*args, ws):
+    result = []
+    ws_iter = list(ws.iter_rows())
+    for i in range(len(ws_iter)):
+        for j in range(len(ws_iter[i])):
+            for arg in args:
+                if arg == ws_iter[i][j]:
+                    result.append(((i, j), arg))
+    if len(result):
+        return result
+    else:
+        return False
+
+
+def edit_accounts_excel():
+    try:
+        wb = openpyxl.load_workbook('accounts.xlsx')
+        ws = wb['Sheet1']
+    except:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Sheet1'
+    account_info = find_info(info[5], ws=ws)
+    if account_info:
+        ws[f'F{account_info[0][0][0] + 1}'].value = ws[f'F{account_info[0][0][0] + 1}'].value + total_cost // 10
+    else:
+        ws.append([info[0], info[1], info[2], info[3], info[4], info[5], total_cost // 10])
+    try:
+        wb.save('accounts.xlsx')
+    except Exception as e:
+        print(f"Таблица Excel 'accounts' не была закрыта перед сохранением. Заказ не сохранён в таблицу. ({e})")
 
 
 #  Режим администратора
@@ -350,17 +391,25 @@ def print_orders():
 
 
 #  Основная функция
-def main():
-    global info
-    print(
-        "\n\n\n-----------Добро пожаловать в Пиццерию-----------\n"
-        "Пожалуйста, введите ваше имя, фамилию и возраст:\n")
-    while not info:
-        info = get_info()
-    if is_admin:
-        admin_main()
-        return
-    print(f"\nЗдравстуйте, {info[0]} {info[1]}\n")
+def main(orders_left=2):
+    global info, order_number, purchases, custom_pizzas_amt, total_cost, purchases_list
+    order_number = ['A', 'B', 'C', 'D', 'E', 'F', 'G'][randint(0, 6)] + str(randint(1, 99))
+    purchases = {}
+    custom_pizzas_amt = 0
+    total_cost = 0
+    purchases_list = ""
+    if not info:
+        print(
+            "\n\n\n-----------Добро пожаловать в Пиццерию-----------\n"
+            "Пожалуйста, введите ваше имя, фамилию и возраст:\n")
+        while not info:
+            info = get_info()
+        if is_admin:
+            admin_main()
+            return
+        print(f"\nЗдравстуйте, {info[0]} {info[1]}\n")
+    else:
+        print('\n' * 3)
     while True:
         show_menu()
         action = input(
@@ -374,10 +423,18 @@ def main():
             custom_pizza()
         elif action == '0':
             if pay():
-                edit_excel()
+                edit_orders_excel()
+                edit_accounts_excel()
                 print(f"\nСпасибо за покупку, {info[0]}!")
                 draw_pizza_art()
                 break
+    inp_text = str(f"Введите 1, если вы хотите сделать ещё один заказ, или любой другой символ,"
+                   f" чтобы закончить создавать заказы. Вы можете сделать ещё {orders_left} заказов: ")
+    if orders_left > 0 and input(inp_text) == '1':
+        main(orders_left - 1)
+    else:
+        print(f"Благодарим вас за заказ, {info[0]}!")
+        return
 
 
 main()
