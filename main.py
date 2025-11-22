@@ -209,12 +209,15 @@ def pay_card():
 
 @app.route("/order/pay/cash", methods=["POST", "GET"])
 def pay_cash():
+    session["cash"] = request.form.get("cash", "N/A")
+    app.logger.debug(session.get("cash"))
     cash = 0
     try:
         cash = int(session.get("cash"))
     except:
         pass
-    if cash and cash - session.get("total_cost") >= 0:
+    app.logger.debug(cash)
+    if cash and cash - int(session.get("total_cost")) >= 0:
         bonus_info = "Вам не были начислены бонусы, так как вы не зарегистрированы"
         if session.get("login") and session.get("password"):
             bonus_info = f"На ваш аккаунт начислено {session.get('total_cost') // 10} бонусов"
