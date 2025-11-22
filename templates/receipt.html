@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</style>
+        <head>
+        <meta charset="utf-8">
+        <title>PIZZERIA CASH RECEIPT</title>
+        </head>
+        <body>
+
+        <pre>
+    	        Пиццерия
+        </pre>
+        <p>{{ date }}</p>
+        <pre>
+    	         Оплата
+        </pre>
+        <p>Номер заказа: {{ order_number }}</p>
+        <p>Клиент: {{ client }}</p>
+        <p>Сумма (Руб): {{ total_cost }}</p>
+        <p>-------------------------------------------------------</p>
+        <pre>
+              Товарный чек
+        </pre>
+        <p>{{ purchases_list }}</p>
+        <p>ИНФОРМАЦИЯ НА САЙТЕ: pizzeria.fake.ru</p>
+        <p>----------------------------------------</p>
+        <p>ИТОГ К ОПЛАТЕ.....................{{ total_cost }}</p>
+        <p>----------------------------------------</p>
+        <h1>ИТОГ = {{ total_cost }}</h1>
+        <img src="{{ qr_filename }}" alt="QR-CODE" width="200" height="200"></body>

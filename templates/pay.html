@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Оплата заказа</title>
+</head>
+<body>
+<h1>Оплата заказа Пиццерии</h1>
+<h2>Заказ {{ order_number }}</h2>
+<p>{{ purchases|nl2br }}</p><br>
+<h4>Сумма к оплате: {{ total_cost }} руб.</h4><br><br>
+<p>Выберите способ оплаты заказа: </p>
+<form method="post">
+    <input type="submit" formaction="/order/pay/card" value="Оплатить картой"><br><br>
+    <input type="text" name="cash" placeholder="Сумма к оплате наличными">
+    <input type="submit" formaction="/order/pay/cash" value="Оплатить наличными"><br><br>
+    <input type="submit" formaction="/order" value="Отменить оплату"><br><br>
+</form>
+<p>{{ user_info|nl2br }}</p>
+</body>
+</html>

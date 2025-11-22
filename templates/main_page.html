@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Оформление заказа</title>
+</head>
+<body>
+<h1>Оформление заказа Пиццерии</h1>
+<p>{{ menu|nl2br }}</p>
+<p>{{ order_preview|nl2br }}</p>
+<p>Напишите название предмета, который вы хотите добавить в заказ: </p>
+<form method="post">
+    <input type="text" name="item_to_add">
+    <input type="submit" formaction="/order/add_item" value="Добавить предмет"><br><br>
+    <input type="submit" formaction="/order/custom/" value="Перейти в меню создания кастомной пиццы"><br><br>
+    <input type="submit" formaction="/order/pay" value="Оплатить заказ"><br><br>
+</form>
+<p>{{ user_info|nl2br }}</p>
+</body>
+</html>
